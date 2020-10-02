@@ -1,0 +1,4 @@
+<?php
+
+$s_plugin_RelationshipCol_ = '';
+$s_plugin_RelationshipCol_title = 'Relationship Column Einstellungen';

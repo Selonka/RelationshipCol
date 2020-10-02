@@ -1,0 +1,9 @@
+<?php
+
+# Copyright (c) 2012 John Reese
+# Licensed under the MIT license
+
+$s_plugin_RelationshipCol_ = '';
+$s_plugin_RelationshipCol_title = 'Relationship Column';
+
+

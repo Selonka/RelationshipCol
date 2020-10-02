@@ -1,0 +1,233 @@
+<?php
+
+  /** Plugin declaration
+   * extends MantisPlugin
+   * Example plugin that implements Jquery files
+   */
+
+class RelationshipColPlugin extends MantisPlugin  
+ {
+## Register
+ function register()
+    {
+      $this->name = 'RelationshipCol';
+      $this->description = 'Show Relationship count columns';
+
+      $this->version = '0.0.1';
+      $this->requires = array(
+        "MantisCore" => "2.0.0",
+      );
+
+      $this->author = 'Selonka';
+      $this->contact = '';
+      $this->url = '';
+    }
+ function init()
+	{
+    if(! plugin_config_get("is_table_init")){
+      initTable();
+      plugin_config_set("is_table_init", true);
+    }
+	}
+## Config
+ function config() 
+ {
+  return array(
+			'view_threshold'	=> VIEWER,
+			'enable_porting'	=> OFF,
+      'manage_threshold'	=> ADMINISTRATOR,
+      'is_table_init'  => false,
+		);
+	}
+## Hooks 
+  function hooks()
+  {
+    return array(      
+    "EVENT_RELATIONSHIP_ADDED" => 'updaterelationshipsAdd',
+    "EVENT_RELATIONSHIP_DELETE" => 'updaterelationshipsDelete',
+    "EVENT_FILTER_COLUMNS" => 'filtercolumns',
+    );
+  }
+## Schema
+  function schema() 
+  {
+      return array(
+      array( "CreateTableSQL", array( plugin_table( "relationshipcount" ), "
+        id			I		NOTNULL UNSIGNED AUTOINCREMENT PRIMARY,
+        bugId		I		NOTNULL,
+        countParent		I		NOTNULL,
+        countChild		I		NOTNULL,
+        countRelated		I		NOTNULL
+        ",
+        array( "mysql" => "DEFAULT CHARSET=utf8" ) ) ));
+  }
+
+  function filtercolumns(){
+    require_once( 'classes/RelationshipCountColumnParent.class.php' );
+    require_once( 'classes/RelationshipCountColumnChild.class.php' );
+    require_once( 'classes/RelationshipCountColumnRelated.class.php' );
+		return array(
+      'RelationshipCountColumnParent',
+      'RelationshipCountColumnChild',
+      'RelationshipCountColumnRelated'
+		);
+  }
+
+  function updaterelationshipsAdd($p_event, $p_relation_id){
+    updaterelationships($p_event, $p_relation_id, "+");
+  }
+
+  function updaterelationshipsDelete($p_event, $p_relation_id){
+    updaterelationships($p_event, $p_relation_id, "-");
+  }
+}
+function initTable(){
+  $t_rcount_table = plugin_table( 'relationshipcount' );
+  $t_query = "SELECT * FROM {bug_relationship} AS relations INNER JOIN {bug} as bugTable ON relations.source_bug_id = bugTable.id" ;
+  $t_result = db_query( $t_query );
+   
+  $t_count_arrays = countRelationShips($t_result, null);
+  $t_count_array_blocks = $t_count_arrays["block_array"];
+  $t_count_array_depends = $t_count_arrays["depend_array"];
+  $t_count_array_related = $t_count_arrays["related_array"];
+  $t_bugId_list  =$t_count_arrays["bug_list"];
+
+  // Create Records in DB
+  foreach ( $t_bugId_list as $t_bugId) {
+    //blocks
+    if ( isset( $t_count_array_blocks[$t_bugId ] ) ) {
+      $t_count_blocks = $t_count_array_blocks[$t_bugId];
+    }else{
+      $t_count_blocks = 0;
+    }
+  
+    //depends
+    if ( isset( $t_count_array_depends[ $t_bugId ] ) ) {
+      $t_count_depends = $t_count_array_depends[$t_bugId];
+    }else{
+      $t_count_depends = 0;
+    }
+  
+    //related
+    if ( isset( $t_count_array_related[ $t_bugId] ) ) {
+      $t_count_related = $t_count_array_related[$t_bugId];
+    }else{
+      $t_count_related = 0;
+    }
+    $t_query = "INSERT INTO $t_rcount_table ( bugId, countParent, countChild, countRelated ) VALUES (" . $t_bugId . ", " . $t_count_depends . "," . $t_count_blocks . "," . $t_count_related . ")";
+    db_query( $t_query );
+  }
+
+}
+
+function countRelationShips($p_dbResults){
+  
+  $t_count_array_blocks = array();
+  $t_count_array_depends = array();
+  $t_count_array_related = array();
+  $t_bugId_list = array();
+
+  while ( $t_row = db_fetch_array( $p_dbResults ) ) {
+    $t_bugId = $t_row["id"];
+
+    if (!isset( $t_bugId_list[$t_bugId])){
+      $t_bugId_list[$t_bugId] = "$t_bugId";
+    }
+     
+
+    if($t_row['relationship_type'] == "2"){
+      //depends
+      if ( isset($t_count_array_depends [ $t_row['source_bug_id'] ] ) ) {
+        $t_count_array_depends [ $t_row['source_bug_id'] ]++;
+
+      } else {
+        $t_count_array_depends [ $t_row['source_bug_id'] ] = 1;
+      }
+
+      //blocks
+      if ( isset($t_count_array_blocks [ $t_row['destination_bug_id'] ] ) ) {
+        $t_count_array_blocks [ $t_row['destination_bug_id'] ]++;
+
+      } else {
+        $t_count_array_blocks [ $t_row['destination_bug_id'] ] = 1;
+      }
+      //Add BlockId too
+      if (!isset( $t_bugId_list[$t_row['destination_bug_id']])){
+        $t_bugId_list[$t_row['destination_bug_id']] = $t_row['destination_bug_id'];
+      }
+    }
+
+    if($t_row['relationship_type'] == "1"){
+      //Source
+      if ( isset($t_count_array_related [ $t_row['source_bug_id'] ] ) ) {
+        $t_count_array_related [ $t_row['source_bug_id'] ]++;
+
+      } else {
+        $t_count_array_related [ $t_row['source_bug_id'] ] = 1;
+      }
+
+      //Destination
+      if ( isset($t_count_array_related [ $t_row['destination_bug_id'] ] ) ) {
+        $t_count_array_related [ $t_row['destination_bug_id'] ]++;
+
+      } else {
+        $t_count_array_related [ $t_row['destination_bug_id'] ] = 1;
+      }
+
+      //add Destination Bug for related too
+      if (!isset( $t_bugId_list[$t_row['destination_bug_id']])){
+        $t_bugId_list[$t_row['destination_bug_id']] = $t_row['destination_bug_id'];
+      }
+    }
+  }
+  return array(
+    "block_array" => $t_count_array_blocks,
+    "depend_array" => $t_count_array_depends,
+    "related_array" => $t_count_array_related,
+    "bug_list" =>  $t_bugId_list
+  );
+}
+
+function updaterelationships($p_event, $p_relation_id, $p_sign){
+  $t_query = "SELECT * FROM {bug_relationship} WHERE id IN ( $p_relation_id )";
+  $t_result = db_query( $t_query );
+
+  $t_row = db_fetch_array( $t_result ); 
+  $t_source_bug_id = $t_row["source_bug_id"];
+  $t_destination_bug_id = $t_row["destination_bug_id"];
+  $t_relationship_type = $t_row["relationship_type"];
+
+  if($t_relationship_type == "2"){
+    //Depends
+    UpdateDB($t_source_bug_id, "countParent", $p_sign);
+    //Blocks
+    UpdateDB($t_destination_bug_id, "countChild", $p_sign);
+  }
+
+  if($t_relationship_type == "1"){
+    UpdateDB($t_source_bug_id, "countRelated", $p_sign);
+    UpdateDB($t_destination_bug_id, "countRelated", $p_sign);
+  }
+}
+
+function UpdateDB($p_bugId, $p_count_type, $p_sign){
+  $t_rcount_table = plugin_table( 'relationshipcount' );
+  $t_query = "SELECT * FROM $t_rcount_table WHERE bugId = $p_bugId";
+  $t_result = db_query( $t_query );
+  
+  //Check if Bug has an Entry in Table
+  if($t_row = db_fetch_array($t_result)){
+    $t_query = "UPDATE $t_rcount_table SET ". $p_count_type." = ".$p_count_type." ".$p_sign." 1 WHERE bugId = $p_bugId";
+  }else{
+    if($p_count_type == "countParent"){
+      $t_query = "INSERT INTO $t_rcount_table ( bugId, countParent, countChild, countRelated ) VALUES (" . $p_bugId . ", 1,0,0)";
+    }
+    if($p_count_type == "countChild"){
+      $t_query = "INSERT INTO $t_rcount_table ( bugId, countParent, countChild, countRelated ) VALUES (" . $p_bugId . ", 0,1,0)";
+    }
+    if($p_count_type == "countRelated"){
+      $t_query = "INSERT INTO $t_rcount_table ( bugId, countParent, countChild, countRelated ) VALUES (" . $p_bugId . ", 0,0,1)";
+    }
+  }
+  db_query( $t_query );
+}
