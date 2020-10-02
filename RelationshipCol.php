@@ -20,7 +20,7 @@ class RelationshipColPlugin extends MantisPlugin
 
       $this->author = 'Selonka';
       $this->contact = '';
-      $this->url = '';
+      $this->url = 'https://github.com/Selonka/RelationshipCol';
     }
  function init()
 	{
