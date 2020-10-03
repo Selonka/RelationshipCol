@@ -9,9 +9,8 @@ class RelationshipCountColumnParent extends MantisColumn {
 
 	public function __construct() {
 		plugin_push_current( 'RelationshipCol' );
-
-		#$this->title = plugin_lang_get( 'changeset_column_title' );
-		$this->title = 'Relationship Count Parent';
+		
+		$this->title = plugin_lang_get( 'col_parent' );
 		plugin_pop_current();
 	}
 
