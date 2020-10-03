@@ -1,5 +1,7 @@
 # RelationshipCol
-A Mantis Plugin to show the relationshipcount on the filterpage  
+A Mantis Plugin to show the relationshipcount on the filterpage.
+  
+## Description ##   
 This plugin for Mantis allows you to display 3 additional columns (sortable) in the View Issue Page to show the count of relationships for a ticket.  
 
 * [ RC Parent of ] The number of tickets on which the current ticket is dependent  
