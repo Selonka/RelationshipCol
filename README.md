@@ -20,19 +20,19 @@ Before the installation a little preparation is necessary, the files events_inc.
 
 Alternatively the following lines can be added to relationship_api.php:  
 
-event_signal( 'EVENT_RELATIONSHIP_ADDED', $t_relationship_id );  
+__event_signal( 'EVENT_RELATIONSHIP_ADDED', $t_relationship_id );__  
 After the query for adding a relationship has been executed (~ line 253).   
   
-event_signal( 'EVENT_RELATIONSHIP_DELETE', $p_relationship_id );  
+__event_signal( 'EVENT_RELATIONSHIP_DELETE', $p_relationship_id );__  
 Before the query to delete the relationship was executed (~ line 339)  
   
 In the events_inc.php the following lines must be introduced:  
-	'EVENT_RELATIONSHIP_ADDED' => EVENT_TYPE_EXECUTE,  
-	'EVENT_RELATIONSHIP_DELETE' => EVENT_TYPE_EXECUTE,  
+	__'EVENT_RELATIONSHIP_ADDED' => EVENT_TYPE_EXECUTE,__
+	__'EVENT_RELATIONSHIP_DELETE' => EVENT_TYPE_EXECUTE,__  
   
 Under # Other bug events  
 
-!!!Notice!!! After every update of Mantis you have to do this procedure again!!!  
+__!!!Notice!!!__ After every update of Mantis you have to do this procedure again!!!  
      
 Copy the plugin folder under /mantis/plugins and install the plugin via Manage Plugins in the administration
 ## Known issues ##
