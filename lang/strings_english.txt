@@ -1,9 +1,7 @@
 <?php
 
-# Copyright (c) 2012 John Reese
-# Licensed under the MIT license
-
 $s_plugin_RelationshipCol_ = '';
 $s_plugin_RelationshipCol_title = 'Relationship Column';
-
-
+$s_plugin_RelationshipCol_col_child = 'RC Child of';
+$s_plugin_RelationshipCol_col_parent = 'RC Parent of';
+$s_plugin_RelationshipCol_col_related = 'RC Related';
