@@ -20,14 +20,14 @@ Before the installation a little preparation is necessary, the files events_inc.
 
 Alternatively the following lines can be added to relationship_api.php:  
 
-__event_signal( 'EVENT_RELATIONSHIP_ADDED', $t_relationship_id );__  
+__event_signal( 'EVENT_RELATIONSHIP_ADDED', $t_relationship_id );__    
 After the query for adding a relationship has been executed (~ line 253).   
   
-__event_signal( 'EVENT_RELATIONSHIP_DELETE', $p_relationship_id );__  
+__event_signal( 'EVENT_RELATIONSHIP_DELETE', $p_relationship_id );__
 Before the query to delete the relationship was executed (~ line 339)  
   
 In the events_inc.php the following lines must be introduced:  
-	__'EVENT_RELATIONSHIP_ADDED' => EVENT_TYPE_EXECUTE,__
+	__'EVENT_RELATIONSHIP_ADDED' => EVENT_TYPE_EXECUTE,__  
 	__'EVENT_RELATIONSHIP_DELETE' => EVENT_TYPE_EXECUTE,__  
   
 Under # Other bug events  
