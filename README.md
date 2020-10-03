@@ -31,7 +31,9 @@ In the events_inc.php the following lines must be introduced:
 	'EVENT_RELATIONSHIP_DELETE' => EVENT_TYPE_EXECUTE,  
   
 Under # Other bug events  
-  
+
+!!!Notice!!! After every update of Mantis you have to do this procedure again!!!  
+     
 Copy the plugin folder under /mantis/plugins and install the plugin via Manage Plugins in the administration
 ## Known issues ##
  * Nothing here yet feel free to report ;)
