@@ -10,8 +10,7 @@ class RelationshipCountColumnChild extends MantisColumn {
 	public function __construct() {
 		plugin_push_current( 'RelationshipCol' );
 
-		#$this->title = plugin_lang_get( 'changeset_column_title' );
-		$this->title = 'Relationship Count Child';
+		$this->title = plugin_lang_get( 'col_child' );
 		plugin_pop_current();
 	}
 
