@@ -11,8 +11,7 @@ class RelationshipCountColumnRelated extends MantisColumn {
 	public function __construct() {
 		plugin_push_current( 'RelationshipCol' );
 
-		#$this->title = plugin_lang_get( 'changeset_column_title' );
-		$this->title = 'Relationship Count Related';
+		$this->title = plugin_lang_get( 'col_related' );
 		plugin_pop_current();
 	}
 
