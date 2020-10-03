@@ -22,13 +22,24 @@ class RelationshipColPlugin extends MantisPlugin
       $this->contact = '';
       $this->url = 'https://github.com/Selonka/RelationshipCol';
     }
- function init()
+ 
+    function init()
 	{
+
     if(! plugin_config_get("is_table_init")){
       initTable();
       plugin_config_set("is_table_init", true);
     }
-	}
+  }
+  
+## Events
+function events(){
+  return array(
+  'EVENT_RELATIONSHIP_ADDED' => EVENT_TYPE_EXECUTE,
+  'EVENT_RELATIONSHIP_DELETE' => EVENT_TYPE_EXECUTE,
+  );
+}
+
 ## Config
  function config() 
  {
