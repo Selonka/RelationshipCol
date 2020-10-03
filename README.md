@@ -5,6 +5,7 @@ This plugin for Mantis allows you to display 3 additional columns (sortable) in 
 * [ RC Parent of ] The number of tickets on which the current ticket is dependent  
 * [ RC Child of ] The number of tickets that are blocked by the current ticket
 * [ RC Realated ] The number of tickets related to the current ticket
+  
 ![Screenshot of view issue page, slimmed down](https://github.com/Selonka/RelationshipCol/blob/main/blob/RelationCol.PNG)
 
 ## Requirements ##
@@ -36,7 +37,7 @@ Copy the plugin folder under /mantis/plugins and install the plugin via Manage P
 ## Next development steps ##
  * Refactoring
  * Add other language
- * Prepare Files for other Version if Mantis too
+ * Prepare Files for other Version of Mantis too
 ## Disclaimer ##
 Any use of this plugin is at your own risk. We are not responsible for any damage or data loss incurred with his use.
 
