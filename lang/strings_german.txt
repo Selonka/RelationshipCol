@@ -2,3 +2,6 @@
 
 $s_plugin_RelationshipCol_ = '';
 $s_plugin_RelationshipCol_title = 'Relationship Column Einstellungen';
+$s_plugin_RelationshipCol_col_child = 'RC Blockiert';
+$s_plugin_RelationshipCol_col_parent = 'RC Abhängig';
+$s_plugin_RelationshipCol_col_related = 'RC Verwandt';
