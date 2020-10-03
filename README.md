@@ -36,6 +36,7 @@ Copy the plugin folder under /mantis/plugins and install the plugin via Manage P
  * Refactoring
  * Add other language
  * Prepare Files for other Version of Mantis too
+ * Add a proper Deinstall Routine
 ## Disclaimer ##
 Any use of this plugin is at your own risk. We are not responsible for any damage or data loss incurred with his use.
 
