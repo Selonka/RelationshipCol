@@ -57,6 +57,7 @@ function events(){
     "EVENT_RELATIONSHIP_ADDED" => 'updaterelationshipsAdd',
     "EVENT_RELATIONSHIP_DELETE" => 'updaterelationshipsDelete',
     "EVENT_FILTER_COLUMNS" => 'filtercolumns',
+    "EVENT_UPDATE_BUG" => 'updateBugData'
     );
   }
 ## Schema
@@ -85,11 +86,27 @@ function events(){
   }
 
   function updaterelationshipsAdd($p_event, $p_relation_id){
-    updaterelationships($p_event, $p_relation_id, "+");
+    updaterelationships($p_relation_id, "+");
   }
 
   function updaterelationshipsDelete($p_event, $p_relation_id){
-    updaterelationships($p_event, $p_relation_id, "-");
+    updaterelationships($p_relation_id, "-");
+  }
+
+  function updateBugData($p_issue_id, $p_old_bug_data, $p_new_bug_data){
+    $t_old_bug_status = $p_old_bug_data -> status;
+    $t_new_bug_status = $p_new_bug_data -> status;
+    $t_bug_Id = $p_new_bug_data -> id;
+  
+    //Status changed to resolved or closed Remove from Count
+    if($t_new_bug_status >= 80 AND $t_old_bug_status < 80){
+      updaterealtionshipsParent( $t_bug_Id, "-");
+    }
+
+    //Status changed from resolved/closed to other
+    if($t_new_bug_status < 80 AND $t_old_bug_status >= 80){
+      updaterealtionshipsParent( $t_bug_Id, "+");
+    }
   }
 }
 function initTable(){
@@ -101,7 +118,7 @@ function initTable(){
   $t_count_array_blocks = $t_count_arrays["block_array"];
   $t_count_array_depends = $t_count_arrays["depend_array"];
   $t_count_array_related = $t_count_arrays["related_array"];
-  $t_bugId_list  =$t_count_arrays["bug_list"];
+  $t_bugId_list = $t_count_arrays["bug_list"];
 
   // Create Records in DB
   foreach ( $t_bugId_list as $t_bugId) {
@@ -129,6 +146,21 @@ function initTable(){
     db_query( $t_query );
   }
 
+  $t_query = "SELECT * FROM {bug_relationship} AS relations INNER JOIN {bug} as bugTable ON relations.destination_bug_id = bugTable.id" ;
+  $t_result = db_query( $t_query );
+  $t_bugId_list = array();
+
+  while ( $t_row = db_fetch_array( $t_result ) ) {
+    $t_bug_status = $t_row["status"];
+    $t_bug_Id = $t_row["id"];
+    
+    if (!isset( $t_bugId_list[$t_bugId])){
+      $t_bugId_list[$t_bugId] = "$t_bugId";
+      if($t_bug_status >= 80){
+        updaterealtionshipsParent( $t_bug_Id, "-");
+      }
+    } 
+  }
 }
 
 function countRelationShips($p_dbResults){
@@ -140,33 +172,32 @@ function countRelationShips($p_dbResults){
 
   while ( $t_row = db_fetch_array( $p_dbResults ) ) {
     $t_bugId = $t_row["id"];
+    $t_bugStatus = $t_row["status"];
 
     if (!isset( $t_bugId_list[$t_bugId])){
       $t_bugId_list[$t_bugId] = "$t_bugId";
     }
      
+      if($t_row['relationship_type'] == "2"){
+        //depends
+        if ( isset($t_count_array_depends [ $t_row['source_bug_id'] ] ) ) {
+          $t_count_array_depends [ $t_row['source_bug_id'] ]++;
+        } else {
+          $t_count_array_depends [ $t_row['source_bug_id'] ] = 1;
+        }
 
-    if($t_row['relationship_type'] == "2"){
-      //depends
-      if ( isset($t_count_array_depends [ $t_row['source_bug_id'] ] ) ) {
-        $t_count_array_depends [ $t_row['source_bug_id'] ]++;
-
-      } else {
-        $t_count_array_depends [ $t_row['source_bug_id'] ] = 1;
-      }
-
-      //blocks
-      if ( isset($t_count_array_blocks [ $t_row['destination_bug_id'] ] ) ) {
-        $t_count_array_blocks [ $t_row['destination_bug_id'] ]++;
-
-      } else {
-        $t_count_array_blocks [ $t_row['destination_bug_id'] ] = 1;
-      }
-      //Add BlockId too
-      if (!isset( $t_bugId_list[$t_row['destination_bug_id']])){
-        $t_bugId_list[$t_row['destination_bug_id']] = $t_row['destination_bug_id'];
-      }
-    }
+        //blocks
+        if ( isset($t_count_array_blocks [ $t_row['destination_bug_id'] ] ) ) {
+          $t_count_array_blocks [ $t_row['destination_bug_id'] ]++;
+        } else {
+          $t_count_array_blocks [ $t_row['destination_bug_id'] ] = 1;
+        }
+        //Add BlockId too
+        if (!isset( $t_bugId_list[$t_row['destination_bug_id']])){
+          $t_bugId_list[$t_row['destination_bug_id']] = $t_row['destination_bug_id'];
+        }
+     } 
+    
 
     if($t_row['relationship_type'] == "1"){
       //Source
@@ -199,7 +230,16 @@ function countRelationShips($p_dbResults){
   );
 }
 
-function updaterelationships($p_event, $p_relation_id, $p_sign){
+function updaterealtionshipsParent($p_bug_Id, $p_sign){
+  $t_query = "SELECT * FROM {bug_relationship} WHERE destination_bug_id = $p_bug_Id";
+  $t_dbresults = db_query( $t_query );
+
+    while ( $t_row = db_fetch_array( $t_dbresults ) ) {
+      updaterelationships($t_row["id"], $p_sign, $p_withrelation = false);
+    }
+}
+
+function updaterelationships($p_relation_id, $p_sign, $p_withrelation = true){
   $t_query = "SELECT * FROM {bug_relationship} WHERE id IN ( $p_relation_id )";
   $t_result = db_query( $t_query );
 
@@ -215,9 +255,11 @@ function updaterelationships($p_event, $p_relation_id, $p_sign){
     UpdateDB($t_destination_bug_id, "countChild", $p_sign);
   }
 
-  if($t_relationship_type == "1"){
-    UpdateDB($t_source_bug_id, "countRelated", $p_sign);
-    UpdateDB($t_destination_bug_id, "countRelated", $p_sign);
+  if($p_withrelation){
+    if($t_relationship_type == "1"){
+      UpdateDB($t_source_bug_id, "countRelated", $p_sign);
+      UpdateDB($t_destination_bug_id, "countRelated", $p_sign);
+    }
   }
 }
 
