@@ -154,8 +154,8 @@ function initTable(){
     $t_bug_status = $t_row["status"];
     $t_bug_Id = $t_row["id"];
     
-    if (!isset( $t_bugId_list[$t_bugId])){
-      $t_bugId_list[$t_bugId] = "$t_bugId";
+    if (!isset( $t_bugId_list[$t_bug_Id])){
+      $t_bugId_list[$t_bug_Id] = "$t_bug_Id";
       if($t_bug_status >= 80){
         updaterealtionshipsParent( $t_bug_Id, "-");
       }
