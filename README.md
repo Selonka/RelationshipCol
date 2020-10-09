@@ -9,7 +9,8 @@ This plugin for Mantis allows you to display 3 additional columns (sortable) in 
 * [ RC Realated ] The number of tickets related to the current ticket
   
 ![Screenshot of view issue page, slimmed down](https://github.com/Selonka/RelationshipCol/blob/main/blob/RelationCol.PNG)
-
+## Purpose ##
+This plugin allows users to sort tickets by the number of their dependencies. This way you can identify tickets that block a large number of other tickets or tickets that require a large number of other tickets to resolve to get resolved. This should help to prioritize tickets.
 ## Requirements ##
 * Mantis v2.x.x
 * Tested on 2.24.0
@@ -29,6 +30,7 @@ Before the query to delete the relationship was executed (~ line 339)
 __!!!Notice!!!__ After every update of Mantis you have to do this procedure again!!!  
      
 Copy the plugin folder under /mantis/plugins and install the plugin via Manage Plugins in the administration
+
 ## Known issues ##
  * Nothing here yet feel free to report ;)
 
