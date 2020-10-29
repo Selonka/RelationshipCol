@@ -25,10 +25,11 @@ class RelationshipColPlugin extends MantisPlugin
  
     function init()
 	{
-
     if(! plugin_config_get("is_table_init")){
-      initTable();
-      plugin_config_set("is_table_init", true);
+      if(plugin_config_get("schema")){
+          plugin_config_set("is_table_init", true);
+          UpdateTables();
+      }
     }
   }
   
@@ -47,7 +48,7 @@ function events(){
 			'view_threshold'	=> VIEWER,
 			'enable_porting'	=> OFF,
       'manage_threshold'	=> ADMINISTRATOR,
-      'is_table_init'  => false,
+      'is_table_init'  => false
 		);
 	}
 ## Hooks 
@@ -60,18 +61,21 @@ function events(){
     "EVENT_UPDATE_BUG" => 'updateBugData'
     );
   }
+
 ## Schema
   function schema() 
   {
-      return array(
+      $t_db_tables_array = createTables();
+      return array_merge(array(
       array( "CreateTableSQL", array( plugin_table( "relationshipcount" ), "
         id			I		NOTNULL UNSIGNED AUTOINCREMENT PRIMARY,
         bugId		I		NOTNULL,
         countParent		I		NOTNULL,
         countChild		I		NOTNULL,
         countRelated		I		NOTNULL
-        ",
-        array( "mysql" => "DEFAULT CHARSET=utf8" ) ) ));
+        ")),
+        array( "mysql" => "DEFAULT CHARSET=utf8" )
+      ) , $t_db_tables_array);
   }
 
   function filtercolumns(){
@@ -109,43 +113,53 @@ function events(){
     }
   }
 }
-function initTable(){
-  $t_rcount_table = plugin_table( 'relationshipcount' );
-  $t_query = "SELECT * FROM {bug_relationship} AS relations INNER JOIN {bug} as bugTable ON relations.source_bug_id = bugTable.id" ;
-  $t_result = db_query( $t_query );
+
+function createTables(){
+  
+   $t_query = "SELECT * FROM {bug_relationship} AS relations INNER JOIN {bug} as bugTable ON relations.source_bug_id = bugTable.id" ;
+   $t_result = db_query( $t_query );
+    
+   $t_count_arrays = countRelationShips($t_result, null);
+   $t_count_array_blocks = $t_count_arrays["block_array"];
+   $t_count_array_depends = $t_count_arrays["depend_array"];
+   $t_count_array_related = $t_count_arrays["related_array"];
+   $t_bugId_list = $t_count_arrays["bug_list"];
    
-  $t_count_arrays = countRelationShips($t_result, null);
-  $t_count_array_blocks = $t_count_arrays["block_array"];
-  $t_count_array_depends = $t_count_arrays["depend_array"];
-  $t_count_array_related = $t_count_arrays["related_array"];
-  $t_bugId_list = $t_count_arrays["bug_list"];
-
-  // Create Records in DB
-  foreach ( $t_bugId_list as $t_bugId) {
-    //blocks
-    if ( isset( $t_count_array_blocks[$t_bugId ] ) ) {
-      $t_count_blocks = $t_count_array_blocks[$t_bugId];
-    }else{
-      $t_count_blocks = 0;
-    }
+   
+   $t_return_array = array();
+   // Create Records in DB
+   foreach ( $t_bugId_list as $t_bugId) {
+     //blocks
+     if ( isset( $t_count_array_blocks[$t_bugId ] ) ) {
+       $t_count_blocks = $t_count_array_blocks[$t_bugId];
+     }else{
+       $t_count_blocks = 0;
+     }
+   
+     //depends
+     if ( isset( $t_count_array_depends[ $t_bugId ] ) ) {
+       $t_count_depends = $t_count_array_depends[$t_bugId];
+     }else{
+       $t_count_depends = 0;
+     }
+   
+     //related
+     if ( isset( $t_count_array_related[ $t_bugId] ) ) {
+       $t_count_related = $t_count_array_related[$t_bugId];
+     }else{
+       $t_count_related = 0;
+     }
+     $t_return_array[] = array( 'InsertData', array( plugin_table( "relationshipcount" ), 
+     " (bugId, countParent, countChild, countRelated) VALUES (" . $t_bugId . "," . $t_count_depends . "," . $t_count_blocks . "," . $t_count_related . ")"
+    ));
   
-    //depends
-    if ( isset( $t_count_array_depends[ $t_bugId ] ) ) {
-      $t_count_depends = $t_count_array_depends[$t_bugId];
-    }else{
-      $t_count_depends = 0;
-    }
-  
-    //related
-    if ( isset( $t_count_array_related[ $t_bugId] ) ) {
-      $t_count_related = $t_count_array_related[$t_bugId];
-    }else{
-      $t_count_related = 0;
-    }
-    $t_query = "INSERT INTO $t_rcount_table ( bugId, countParent, countChild, countRelated ) VALUES (" . $t_bugId . ", " . $t_count_depends . "," . $t_count_blocks . "," . $t_count_related . ")";
-    db_query( $t_query );
-  }
+   }
+   return $t_return_array;
+ }
 
+function UpdateTables(){
+ $t_rcount_table = plugin_table( 'relationshipcount' );
+ 
   $t_query = "SELECT * FROM {bug_relationship} AS relations INNER JOIN {bug} as bugTable ON relations.destination_bug_id = bugTable.id" ;
   $t_result = db_query( $t_query );
   $t_bugId_list = array();
@@ -157,10 +171,11 @@ function initTable(){
     if (!isset( $t_bugId_list[$t_bug_Id])){
       $t_bugId_list[$t_bug_Id] = "$t_bug_Id";
       if($t_bug_status >= 80){
-        updaterealtionshipsParent( $t_bug_Id, "-");
+        $t_db_array[] = updaterealtionshipsParent( $t_bug_Id, "-" );
       }
     } 
   }
+ 
 }
 
 function countRelationShips($p_dbResults){
@@ -198,7 +213,6 @@ function countRelationShips($p_dbResults){
         }
      } 
     
-
     if($t_row['relationship_type'] == "1"){
       //Source
       if ( isset($t_count_array_related [ $t_row['source_bug_id'] ] ) ) {
@@ -231,28 +245,32 @@ function countRelationShips($p_dbResults){
 }
 
 function updaterealtionshipsParent($p_bug_Id, $p_sign){
-  $t_query = "SELECT * FROM {bug_relationship} WHERE destination_bug_id = $p_bug_Id";
-  $t_dbresults = db_query( $t_query );
-
+  
+  db_param_push();
+  $t_query = "SELECT * FROM {bug_relationship} WHERE destination_bug_id = " . db_param();
+  $t_dbresults = db_query( $t_query, array($p_bug_Id) );
+  $t_db_array = array();
     while ( $t_row = db_fetch_array( $t_dbresults ) ) {
       updaterelationships($t_row["id"], $p_sign, $p_withrelation = false);
     }
 }
 
 function updaterelationships($p_relation_id, $p_sign, $p_withrelation = true){
-  $t_query = "SELECT * FROM {bug_relationship} WHERE id IN ( $p_relation_id )";
-  $t_result = db_query( $t_query );
+  db_param_push();
+  $t_query = "SELECT * FROM {bug_relationship} WHERE id IN ( ". db_param() . ")";
+  $t_result = db_query( $t_query, array($p_relation_id) );
 
   $t_row = db_fetch_array( $t_result ); 
   $t_source_bug_id = $t_row["source_bug_id"];
   $t_destination_bug_id = $t_row["destination_bug_id"];
   $t_relationship_type = $t_row["relationship_type"];
 
+
   if($t_relationship_type == "2"){
     //Depends
-    UpdateDB($t_source_bug_id, "countParent", $p_sign);
+   UpdateDB($t_source_bug_id, "countParent", $p_sign);
     //Blocks
-    UpdateDB($t_destination_bug_id, "countChild", $p_sign);
+  UpdateDB($t_destination_bug_id, "countChild", $p_sign);
   }
 
   if($p_withrelation){
@@ -265,22 +283,51 @@ function updaterelationships($p_relation_id, $p_sign, $p_withrelation = true){
 
 function UpdateDB($p_bugId, $p_count_type, $p_sign){
   $t_rcount_table = plugin_table( 'relationshipcount' );
-  $t_query = "SELECT * FROM $t_rcount_table WHERE bugId = $p_bugId";
-  $t_result = db_query( $t_query );
-  
+  db_param_push();
+  $t_query = "SELECT * FROM $t_rcount_table WHERE bugId =" . db_param();
+  $t_result = db_query( $t_query, array($p_bugId) );
+  $t_update = false;
   //Check if Bug has an Entry in Table
+  
   if($t_row = db_fetch_array($t_result)){
-    $t_query = "UPDATE $t_rcount_table SET ". $p_count_type." = ".$p_count_type." ".$p_sign." 1 WHERE bugId = $p_bugId";
-  }else{
-    if($p_count_type == "countParent"){
-      $t_query = "INSERT INTO $t_rcount_table ( bugId, countParent, countChild, countRelated ) VALUES (" . $p_bugId . ", 1,0,0)";
-    }
-    if($p_count_type == "countChild"){
-      $t_query = "INSERT INTO $t_rcount_table ( bugId, countParent, countChild, countRelated ) VALUES (" . $p_bugId . ", 0,1,0)";
-    }
-    if($p_count_type == "countRelated"){
-      $t_query = "INSERT INTO $t_rcount_table ( bugId, countParent, countChild, countRelated ) VALUES (" . $p_bugId . ", 0,0,1)";
+    $t_update  = true;
+  }
+  
+  if($p_count_type == "countParent"){
+    if($t_update){
+      if($p_sign == "-"){
+        $t_query = "UPDATE $t_rcount_table SET countParent = countParent - 1 WHERE bugId = " . db_param();
+      }else{
+        $t_query = "UPDATE $t_rcount_table SET countParent = countParent + 1 WHERE bugId = " . db_param();
+      }
+    }else{
+      $t_query = "INSERT INTO $t_rcount_table ( bugId, countParent, countChild, countRelated ) VALUES (" . db_param() . ", 1,0,0)";
     }
   }
-  db_query( $t_query );
+    
+  if($p_count_type == "countChild"){
+    if($t_update){
+      if($p_sign == "-"){
+        $t_query = "UPDATE $t_rcount_table SET countChild = countChild - 1 WHERE bugId = " . db_param();
+      }else{
+        $t_query = "UPDATE $t_rcount_table SET countChild = countChild + 1 WHERE bugId = " . db_param();
+      }
+    }else{
+      $t_query = "INSERT INTO $t_rcount_table ( bugId, countParent, countChild, countRelated ) VALUES (" . db_param() . ", 0,1,0)";
+    }
+  }
+    
+  if($p_count_type == "countRelated"){
+    if($t_update){
+      if($p_sign == "-"){
+        $t_query = "UPDATE $t_rcount_table SET countRelated = countRelated - 1 WHERE bugId = " . db_param();
+      }else{
+        $t_query = "UPDATE $t_rcount_table SET countRelated = countRelated + 1 WHERE bugId = " . db_param();
+      }
+    }else{ 
+      $t_query = "INSERT INTO $t_rcount_table ( bugId, countParent, countChild, countRelated ) VALUES (" . db_param() . ", 0,0,1)";
+    }
+  }
+  db_param_push();
+  db_query( $t_query, array($p_bugId) );
 }
